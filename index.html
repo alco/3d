@@ -1,0 +1,71 @@
+<html>
+<head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+    <title>Cubism</title>
+    
+    <style type="text/css" media="screen">
+        #canvas {
+            width: 600px;
+            height: 600px;
+            float: left;
+            padding-right: 20px;
+        }
+
+        div.container {
+            background-color: #bbb;
+            width: 800px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="canvas" width="600" height="600">Seems like your browser does not support canvas, sorry.</canvas>
+
+
+    <script id="vshader" type="x-shader/x-vertex">
+        uniform mat4 u_modelViewProjMatrix;
+        uniform mat4 u_normalMatrix;
+        uniform vec3 lightDir;
+
+        attribute vec3 vNormal;
+        attribute vec4 vTexCoord;
+        attribute vec4 vPosition;
+
+        varying float v_Dot;
+        varying vec2 v_texCoord;
+
+        void main()
+        {
+            gl_Position = u_modelViewProjMatrix * vPosition;
+            v_texCoord = vTexCoord.st;
+            vec4 transNormal = u_normalMatrix * vec4(vNormal, 1);
+            v_Dot = max(dot(transNormal.xyz, lightDir), 0.0);
+        }
+    </script>
+
+    <script id="fshader" type="x-shader/x-fragment">
+        precision mediump float;
+
+        uniform sampler2D sampler2d;
+
+        varying float v_Dot;
+        varying vec2 v_texCoord;
+
+        void main()
+        {
+            vec2 texCoord = vec2(v_texCoord.s, 1.0 - v_texCoord.t);
+            vec4 color = texture2D(sampler2d, texCoord);
+            color += vec4(0.1, 0.1, 0.1, 1);
+            gl_FragColor = vec4(color.xyz * v_Dot, color.a);
+        }
+    </script>
+
+    <script src="jquery-1.7.2.js" type="text/javascript" charset="utf-8"></script>
+    <script src="webgl-utils.js" type="text/javascript" charset="utf-8"></script>
+    <script src="webgl-debug.js" type="text/javascript" charset="utf-8"></script>
+    <script src="J3DI.js" type="text/javascript" charset="utf-8"></script>
+    <script src="J3DIMath.js" type="text/javascript" charset="utf-8"></script>
+    <script src="cubism.js" type="text/javascript" charset="utf-8"></script>
+</body>
+</html>
