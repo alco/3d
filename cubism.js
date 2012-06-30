@@ -193,7 +193,7 @@ var angleT = 1;
 
 var rotMat = mat4.create();
 mat4.identity(rotMat);
-mat4.rotateX(rotMat, (35.264) * Math.PI / 180);
+mat4.rotateX(rotMat, Math.asin(Math.tan(30 * Math.PI / 180)));
 mat4.rotateY(rotMat, 45 * Math.PI / 180);
 
 var xRot = vec3.create(1, 0, 0);
