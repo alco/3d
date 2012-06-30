@@ -24,48 +24,35 @@
 
 
     <script id="vshader" type="x-shader/x-vertex">
-        uniform mat4 u_modelViewProjMatrix;
-        uniform mat4 u_normalMatrix;
-        uniform vec3 lightDir;
+        attribute vec3 aVertexPosition;
 
-        attribute vec3 vNormal;
-        attribute vec4 vTexCoord;
-        attribute vec4 vPosition;
+        uniform mat4 uModelViewMatrix;
+        uniform mat4 uProjMatrix;
 
-        varying float v_Dot;
-        varying vec2 v_texCoord;
-
-        void main()
-        {
-            gl_Position = u_modelViewProjMatrix * vPosition;
-            v_texCoord = vTexCoord.st;
-            vec4 transNormal = u_normalMatrix * vec4(vNormal, 1);
-            v_Dot = max(dot(transNormal.xyz, lightDir), 0.0);
+        void main(void) {
+            gl_Position = uProjMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
         }
     </script>
 
     <script id="fshader" type="x-shader/x-fragment">
         precision mediump float;
 
-        uniform sampler2D sampler2d;
-
-        varying float v_Dot;
-        varying vec2 v_texCoord;
-
         void main()
         {
-            vec2 texCoord = vec2(v_texCoord.s, 1.0 - v_texCoord.t);
-            vec4 color = texture2D(sampler2d, texCoord);
-            color += vec4(0.1, 0.1, 0.1, 1);
-            gl_FragColor = vec4(color.xyz * v_Dot, color.a);
+            gl_FragColor = vec4(1., 0., 1., 1.);
         }
     </script>
 
-    <script src="jquery-1.7.2.js" type="text/javascript" charset="utf-8"></script>
-    <script src="webgl-utils.js" type="text/javascript" charset="utf-8"></script>
-    <script src="webgl-debug.js" type="text/javascript" charset="utf-8"></script>
-    <script src="J3DI.js" type="text/javascript" charset="utf-8"></script>
-    <script src="J3DIMath.js" type="text/javascript" charset="utf-8"></script>
+    <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+    <!--<script src="jquery-1.7.2.js" type="text/javascript" charset="utf-8"></script>-->
+    <!--<script src="webgl-utils.js" type="text/javascript" charset="utf-8"></script>-->
+    <!--<script src="webgl-debug.js" type="text/javascript" charset="utf-8"></script>-->
+    <!--<script src="J3DI.js" type="text/javascript" charset="utf-8"></script>-->
+    <!--<script src="J3DIMath.js" type="text/javascript" charset="utf-8"></script>-->
     <script src="cubism.js" type="text/javascript" charset="utf-8"></script>
+
+    <script type="text/javascript" charset="utf-8">
+        startGL();
+    </script>
 </body>
 </html>

@@ -1,120 +1,152 @@
-var g = {};
-
-function init() {
-    // Initialize
-    var gl = initWebGL("canvas");
-    if (!gl) {
+function getShader(gl, id) {
+    var shaderScript = document.getElementById(id);
+    if (!shaderScript) {
         return;
     }
 
-    g.program = simpleSetup(
-            gl, "vshader", "fshader",
-            [ "vNormal", "vColor", "vPosition"], [ 0, 0, 0, 1 ], 10000);
+    var str = "";
+    var k = shaderScript.firstChild;
+    while (k) {
+        if (k.nodeType == 3) {
+            str += k.textContent;
+        }
+        k = k.nextSibling;
+    }
 
-    // Set some uniform variables for the shaders
-    gl.uniform3f(gl.getUniformLocation(g.program, "lightDir"), 0, 0, 1);
-    gl.uniform1i(gl.getUniformLocation(g.program, "sampler2d"), 0);
+    var shader;
+    if (shaderScript.type == "x-shader/x-fragment") {
+        shader = gl.createShader(gl.FRAGMENT_SHADER);
+    } else if (shaderScript.type == "x-shader/x-vertex") {
+        shader = gl.createShader(gl.VERTEX_SHADER);
+    } else {
+        return;
+    }
 
-    // Create a box. with the BufferObjects containing the arrays
-    // for vertices, normals, texture coords, and indices.
-    g.box = makeBox(gl);
+    gl.shaderSource(shader, str);
+    gl.compileShader(shader);
 
-    // Load an image to use. Returns a WebGLTexture object
-    spiritTexture = loadImageTexture(gl, "resources/spirit.jpg");
+    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        console.log(gl.getShaderInfoLog(shader));
+        return;
+    }
 
-    // Create some matrices to use later and save their locations in the shaders
-    g.mvMatrix = new J3DIMatrix4();
-    g.u_normalMatrixLoc = gl.getUniformLocation(g.program, "u_normalMatrix");
-    g.normalMatrix = new J3DIMatrix4();
-    g.u_modelViewProjMatrixLoc = gl.getUniformLocation(g.program, "u_modelViewProjMatrix");
-    g.mvpMatrix = new J3DIMatrix4();
+    return shader;
+}
 
-    // Enable all of the vertex attribute arrays.
-    gl.enableVertexAttribArray(0);
-    gl.enableVertexAttribArray(1);
-    gl.enableVertexAttribArray(2);
+function initShaders(gl, ids) {
+    var shaders = [];
+    for (var i = 0; i < ids.length; ++i) {
+        shaders.push(getShader(gl, ids[i]));
+    }
 
-    // Set up all the vertex attributes for vertices, normals and texCoords
-    gl.bindBuffer(gl.ARRAY_BUFFER, g.box.vertexObject);
-    gl.vertexAttribPointer(2, 3, gl.FLOAT, false, 0, 0);
+    var shaderProgram = gl.createProgram();
+    for (var i = 0; i < shaders.length; i++) {
+        gl.attachShader(shaderProgram, shaders[i]);
+    };
+    gl.linkProgram(shaderProgram);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, g.box.normalObject);
-    gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0);
+    if (!gl.getProgramParameter(shaderProgram, gl.LINK_STATUS)) {
+        console.log("Could not initialise shaders");
+        return;
+    }
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, g.box.texCoordObject);
-    gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0);
+    gl.useProgram(shaderProgram);
 
-    // Bind the index array
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, g.box.indexObject);
+    shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
+    gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
+
+    shaderProgram.pMatrixUniform = gl.getUniformLocation(shaderProgram, "uProjMatrix");
+    shaderProgram.mvMatrixUniform = gl.getUniformLocation(shaderProgram, "uModelViewMatrix");
+
+    return shaderProgram;
+}
+
+function initGL(canvas) {
+    var gl;
+    var names = ["webgl", "experimental-webgl", "webkit-3d", "moz-webgl"];
+    for (var i = 0; i < names.length; ++i) {
+        try {
+            gl = canvas.getContext(names[i]);
+            gl.viewportWidth = canvas.width;
+            gl.viewportHeight = canvas.height;
+        } catch (e) {}
+        if (gl)
+            break;
+    }
+
+    if (!gl) {
+        alert("Could not initialise WebGL, sorry :-(");
+        return;
+    }
+
+    gl.clearColor(0, 0, 0, 1);
 
     return gl;
 }
 
-function reshape(gl)
-{
-    // if the display size of the canvas has changed
-    // change the size we render at to match.
-    var canvas = document.getElementById('canvas');
-    if (canvas.clientWidth == canvas.width && canvas.clientHeight == canvas.height) {
-        return;
-    }
+function initBuffers(gl) {
+    var triangleVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, triangleVertexPositionBuffer);
+    var vertices = [
+         0.0,  1.0,  0.0,
+        -1.0, -1.0,  0.0,
+         1.0, -1.0,  0.0
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    triangleVertexPositionBuffer.itemSize = 3;
+    triangleVertexPositionBuffer.numItems = 3;
 
-    canvas.width = canvas.clientWidth;
-    canvas.height = canvas.clientHeight;
+    var squareVertexPositionBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareVertexPositionBuffer);
+    vertices = [
+         1.0,  1.0,  0.0,
+        -1.0,  1.0,  0.0,
+         1.0, -1.0,  0.0,
+        -1.0, -1.0,  0.0
+    ];
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+    squareVertexPositionBuffer.itemSize = 3;
+    squareVertexPositionBuffer.numItems = 4;
 
-    // Set the viewport and projection matrix for the scene
-    gl.viewport(0, 0, canvas.clientWidth, canvas.clientHeight);
-    g.perspectiveMatrix = new J3DIMatrix4();
-    g.perspectiveMatrix.lookat(0, 0, 7, 0, 0, 0, 0, 1, 0);
-    g.perspectiveMatrix.perspective(30, canvas.clientWidth / canvas.clientHeight, 1, 10000);
+    return [triangleVertexPositionBuffer, squareVertexPositionBuffer];
 }
 
-function drawPicture(gl)
-{
-    //Make sure the canvas is sized correctly.
-    reshape(gl);
+function setMatrixUniforms(gl, program, projMat, mvMat) {
+    gl.uniformMatrix4fv(program.pMatrixUniform, false, projMat);
+    gl.uniformMatrix4fv(program.mvMatrixUniform, false, mvMat);
+}
 
-    // Clear the canvas
+
+function drawScene(gl, program, projMat, mvMat, buffers) {
+    gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    // Make a model/view matrix.
-    g.mvMatrix.makeIdentity();
-    g.mvMatrix.rotate(20, 1, 0, 0);
-    g.mvMatrix.rotate(currentAngle, 0, 1, 0);
+    mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, projMat);
 
-    // Construct the normal matrix from the model-view matrix and pass it in
-    g.normalMatrix.load(g.mvMatrix);
-    g.normalMatrix.invert();
-    g.normalMatrix.transpose();
-    g.normalMatrix.setUniform(gl, g.u_normalMatrixLoc, false);
+    mat4.identity(mvMat);
 
-    // Construct the model-view * projection matrix and pass it in
-    g.mvpMatrix.load(g.perspectiveMatrix);
-    g.mvpMatrix.multiply(g.mvMatrix);
-    g.mvpMatrix.setUniform(gl, gl.u_modelViewProjMatrixLoc, false);
+    mat4.translate(mvMat, [-1.5, 0.0, -7.0]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers[0]);
+    gl.vertexAttribPointer(program.vertexPositionAttribute, buffers[0].itemSize, gl.FLOAT, false, 0, 0);
+    setMatrixUniforms(gl, program, projMat, mvMat);
+    gl.drawArrays(gl.TRIANGLES, 0, buffers[0].numItems);
 
-    // Bind the texture to use
-    gl.bindTexture(gl.TEXTURE_2D, spiritTexture);
-
-    // Draw the cube
-    gl.drawElements(gl.TRIANGLES, g.box.numIndices, gl.UNSIGNED_BYTE, 0);
-
-    // Show the framerate
-    //framerate.snapshot();
-
-    currentAngle += incAngle;
-    if (currentAngle > 360) {
-        currentAngle -= 360;
-    }
+    mat4.translate(mvMat, [3.0, 0.0, 0.0]);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffers[1]);
+    gl.vertexAttribPointer(program.vertexPositionAttribute, buffers[1].itemSize, gl.FLOAT, false, 0, 0);
+    setMatrixUniforms(gl, program, projMat, mvMat);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, buffers[1].numItems);
 }
 
-function start() {
-    var gl = init();
-    reshape(gl);
+function startGL() {
+    var canvas = document.getElementById("canvas");
+    var gl = initGL(canvas);
+    var program = initShaders(gl, ["vshader", "fshader"]);
+    var buffers = initBuffers(gl);
 
-    currentAngle = 0;
-    incAngle = .1;
-    drawPicture(gl);
+    var projMat = mat4.create();
+    var mvMat = mat4.create();
+    drawScene(gl, program, projMat, mvMat, buffers);
 
     return gl;
 }
