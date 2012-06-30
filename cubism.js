@@ -189,11 +189,38 @@ function setMatrixUniforms(gl, program, projMat, mvMat) {
 
 var interval;
 var angle = 45;
-var yangle = 0;
-var zangle = 0;
 var angleT = 1;
-var yangleT = 1;
-var zangleT = 1;
+
+var rotMat = mat4.create();
+mat4.identity(rotMat);
+mat4.rotateX(rotMat, (35.264) * Math.PI / 180);
+mat4.rotateY(rotMat, 45 * Math.PI / 180);
+
+var xRot = vec3.create(1, 0, 0);
+var tmp_a = -35.264 * Math.PI / 180;
+var sin_a = Math.sin(tmp_a / 2);
+var cos_a = Math.cos(tmp_a / 2);
+var rotQuat = quat4.create([sin_a, 0, 0, cos_a]);
+
+tmp_a = 45 * Math.PI / 180;
+sin_a = Math.sin(tmp_a / 2);
+cos_a = Math.cos(tmp_a / 2);
+var anotherQuat = quat4.create([0, sin_a, 0, cos_a]);
+
+quat4.multiply(anotherQuat, rotQuat, rotQuat);
+quat4.toMat4(rotQuat, rotMat);
+
+function easeOutSine(t, b, c, d) {
+    return c * Math.sin(t/d * (Math.PI/2)) + b;
+};
+
+function easeOutElastic(t, b, c, d, a, p) {
+    if (t==0) return b;  if ((t/=d)==1) return b+c;  if (!p) p=d*.3;
+    if (a < Math.abs(c)) { a=c; var s=p/4; }
+    else var s = p/(2*Math.PI) * Math.asin (c/a);
+    return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c + b;
+}
+
 
 function startGL() {
     var canvas = document.getElementById("canvas");
@@ -207,8 +234,8 @@ function startGL() {
     gl.clearColor(0, 0, 0, 1);
 
     var projMat = mat4.create();
-    mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, projMat);
-    //mat4.ortho(-5, 5, -5, 5, -10, 10, projMat);
+    //mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, projMat);
+    mat4.ortho(-5, 5, -5, 5, -10, 10, projMat);
 
     var mvMat = mat4.create();
     mat4.identity(mvMat);
@@ -233,26 +260,20 @@ function startGL() {
         //angle += .01;
         mat4.identity(mvMat);
         mat4.translate(mvMat, [0, 0, -7]);
-        mat4.rotateX(mvMat, (35.264) * Math.PI / 180);
-        mat4.rotateY(mvMat, angle * Math.PI / 180);
-        mat4.rotateX(mvMat, zangle * Math.PI / 180);
-        mat4.rotateZ(mvMat, yangle * Math.PI / 180);
+        mat4.multiply(mvMat, rotMat);
 
         drawBuffer(gl, program, projMat, mvMat, buf.numIndices);
 
         if (angleT < 1) {
-            angle = lerp1(angleFrom, angleTo, cube1(0, 0, 1, 1, angleT));
-            angleT += .1;
-        }
-
-        if (yangleT < 1) {
-            yangle = lerp1(yangleFrom, yangleTo, cube1(0, 0, 1, 1, yangleT));
-            yangleT += .1;
-        }
-
-        if (zangleT < 1) {
-            zangle = lerp1(zangleFrom, zangleTo, cube1(0, 0, 1, 1, zangleT));
-            zangleT += .1;
+            //angle = lerp1(0, angleTo, cube1(0, 0, 1.2, 1, angleT));
+            //angle = easeOutSine(angleT, 0, angleTo, 1);
+            angle = easeOutElastic(angleT, 0, angleTo, 1, 0, .5);
+            var sin_a = Math.sin(angle * Math.PI / 180/2);
+            var cos_a = Math.cos(angle * Math.PI / 180/2);
+            var q = quat4.create([axis[0] * sin_a, axis[1] * sin_a, axis[2] * sin_a, cos_a]);
+            quat4.multiply(q, quatFrom, rotQuat);
+            quat4.toMat4(rotQuat, rotMat);
+            angleT += .04;
         }
     }, 32);
 
@@ -267,45 +288,92 @@ function stop() {
 function drawBuffer(gl, program, projMat, mvMat, numIndices) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
-    //gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    //gl.vertexAttribPointer(program.vertexPositionAttribute, buffer.itemSize, gl.FLOAT, false, 0, 0);
     setMatrixUniforms(gl, program, projMat, mvMat);
     gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_BYTE, 0);
 }
 
+var x_axis = [1, 0, 0];
+var y_axis = [0, 1, 0];
+var z_axis = [0, 0, 1];
+
+function rename_axes(name, angle) {
+    if (name === 'x') {
+        var tmp = y_axis;
+        y_axis = z_axis;
+        z_axis = tmp;
+
+        if (angle > 0) {
+            vec3.negate(z_axis);
+        } else {
+            vec3.negate(y_axis);
+        }
+    } else if (name === 'y') {
+        var tmp = x_axis;
+        x_axis = z_axis;
+        z_axis = tmp;
+
+        if (angle > 0) {
+            vec3.negate(x_axis);
+        } else {
+            vec3.negate(z_axis);
+        }
+    } else {
+        var tmp = x_axis;
+        x_axis = y_axis;
+        y_axis = tmp;
+
+        if (angle > 0) {
+            vec3.negate(y_axis);
+        } else {
+            vec3.negate(x_axis);
+        }
+    }
+}
 
 $('#rot-right').click(function() {
-    angleFrom = angle;
-    angleTo = angle + 90;
+    quatFrom = quat4.create(rotQuat);
+    axis = x_axis;
+    angleTo = 90;
+    rename_axes('x', angleTo);
     angleT = 0;
 });
 
 $('#rot-left').click(function() {
-    angleFrom = angle;
-    angleTo = angle - 90;
+    quatFrom = quat4.create(rotQuat);
+    axis = x_axis;
+    angleTo = -90;
+    rename_axes('x', angleTo);
     angleT = 0;
 });
 
 $('#rot-fwd').click(function() {
-    yangleFrom = yangle;
-    yangleTo = yangle - 90;
-    yangleT = 0;
+    quatFrom = quat4.create(rotQuat);
+    axis = y_axis;
+    angleTo = -90;
+    rename_axes('y', angleTo);
+    angleT = 0;
 });
 
 $('#rot-bkw').click(function() {
-    yangleFrom = yangle;
-    yangleTo = yangle + 90;
-    yangleT = 0;
+    quatFrom = quat4.create(rotQuat);
+    axis = y_axis;
+    angleTo = 90;
+    rename_axes('y', angleTo);
+    angleT = 0;
 });
 
 $('#rot-roll-left').click(function() {
-    zangleFrom = zangle;
-    zangleTo = zangle - 90;
-    zangleT = 0;
+    quatFrom = quat4.create(rotQuat);
+    axis = z_axis;
+    angleTo = -90;
+    rename_axes('z', angleTo);
+    angleT = 0;
 });
 
 $('#rot-roll-right').click(function() {
-    zangleFrom = zangle;
-    zangleTo = zangle + 90;
-    zangleT = 0;
+    quatFrom = quat4.create(rotQuat);
+    axis = z_axis;
+    angleTo = 90;
+    rename_axes('z', angleTo);
+    angleT = 0;
 });

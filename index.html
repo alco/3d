@@ -30,11 +30,11 @@
     <p>TODO: projection</p>
     <p>TODO: light dir</p>
 
-    <button id="rot-left">&lt;y</button>
-    <button id="rot-right">y&gt;</button>
+    <button id="rot-left">&lt;x</button>
+    <button id="rot-right">x&gt;</button>
     <br/>
-    <button id="rot-bkw">&lt;x</button>
-    <button id="rot-fwd">x&gt;</button>
+    <button id="rot-bkw">&lt;y</button>
+    <button id="rot-fwd">y&gt;</button>
     <br/>
     <button id="rot-roll-left">&lt;z</button>
     <button id="rot-roll-right">z&gt;</button>
@@ -72,7 +72,7 @@
         {
             float bias = .0;
             vec3 color = vColor.xyz + vec3(bias);
-            float mult = 0.9;//vDot + .8;
+            float mult = vDot + .2;
             gl_FragColor = vec4(color * mult, vColor.a);
         }
     </script>
@@ -83,7 +83,7 @@
     <!--<script src="webgl-debug.js" type="text/javascript" charset="utf-8"></script>-->
     <!--<script src="J3DI.js" type="text/javascript" charset="utf-8"></script>-->
     <!--<script src="J3DIMath.js" type="text/javascript" charset="utf-8"></script>-->
-    <script src="../bezier/gmath.js" type="text/javascript" charset="utf-8"></script>
+    <script src="gmath.js" type="text/javascript" charset="utf-8"></script>
     <script src="cubism.js" type="text/javascript" charset="utf-8"></script>
 
     <script type="text/javascript" charset="utf-8">
