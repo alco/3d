@@ -54,8 +54,8 @@ function initShaders(gl, ids) {
 
     shaderProgram.vertexPositionAttribute = gl.getAttribLocation(shaderProgram, "aVertexPosition");
     gl.enableVertexAttribArray(shaderProgram.vertexPositionAttribute);
-    shaderProgram.texcoordAttribute = gl.getAttribLocation(shaderProgram, "aTexCoord");
-    gl.enableVertexAttribArray(shaderProgram.texcoordAttribute);
+    shaderProgram.colorAttribute = gl.getAttribLocation(shaderProgram, "aColor");
+    gl.enableVertexAttribArray(shaderProgram.colorAttribute);
     shaderProgram.normalAttribute = gl.getAttribLocation(shaderProgram, "aNormal");
     gl.enableVertexAttribArray(shaderProgram.normalAttribute);
 
@@ -85,6 +85,8 @@ function initGL(canvas) {
     }
 
     gl.enable(gl.DEPTH_TEST);
+    gl.enable(gl.BLEND);
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
 
     return gl;
 }
@@ -133,13 +135,13 @@ function makeBox(ctx) {
 
 
     // texCoord array
-    var texCoords = new Float32Array(
-        [  1, 1,   0, 1,   0, 0,   1, 0,    // v0-v1-v2-v3 front
-           0, 1,   0, 0,   1, 0,   1, 1,    // v0-v3-v4-v5 right
-           1, 0,   1, 1,   0, 1,   0, 0,    // v0-v5-v6-v1 top
-           1, 1,   0, 1,   0, 0,   1, 0,    // v1-v6-v7-v2 left
-           0, 0,   1, 0,   1, 1,   0, 1,    // v7-v4-v3-v2 bottom
-           0, 0,   1, 0,   1, 1,   0, 1 ]   // v4-v7-v6-v5 back
+    var colors = new Float32Array(
+        [  1, 0, 0, 1,   1, 0, 0, 1,   1, 0, 0, 1,   1, 0, 0, 1,    // v0-v1-v2-v3 front
+           0, 1, 0, 1,   0, 1, 0, 1,   0, 1, 0, 1,   0, 1, 0, 1,    // v0-v3-v4-v5 right
+           0, 0, 1, 1,   0, 0, 1, 1,   0, 0, 1, 1,   0, 0, 1, 1,    // v0-v5-v6-v1 top
+           1, 1, 0, 1,   1, 1, 0, 1,   1, 1, 0, 1,   1, 1, 0, 1,    // v1-v6-v7-v2 left
+           1, .5, 0, 1,   1, .5, 0, 1,   1, .5, 0, 1,   1, .5, 0, 1,    // v7-v4-v3-v2 bottom
+           1, 0, 1, 1,   1, 0, 1, 1,   1, 0, 1, 1,   1, 0, 1, 1 ]   // v4-v7-v6-v5 back
        );
 
     // index array
@@ -158,9 +160,9 @@ function makeBox(ctx) {
     ctx.bindBuffer(ctx.ARRAY_BUFFER, retval.normalObject);
     ctx.bufferData(ctx.ARRAY_BUFFER, normals, ctx.STATIC_DRAW);
 
-    retval.texCoordObject = ctx.createBuffer();
-    ctx.bindBuffer(ctx.ARRAY_BUFFER, retval.texCoordObject);
-    ctx.bufferData(ctx.ARRAY_BUFFER, texCoords, ctx.STATIC_DRAW);
+    retval.colorObject = ctx.createBuffer();
+    ctx.bindBuffer(ctx.ARRAY_BUFFER, retval.colorObject);
+    ctx.bufferData(ctx.ARRAY_BUFFER, colors, ctx.STATIC_DRAW);
 
     retval.vertexObject = ctx.createBuffer();
     ctx.bindBuffer(ctx.ARRAY_BUFFER, retval.vertexObject);
@@ -200,12 +202,13 @@ function startGL() {
 
     var projMat = mat4.create();
     mat4.perspective(45, gl.viewportWidth / gl.viewportHeight, 0.1, 100.0, projMat);
+    //mat4.ortho(-5, 5, -5, 5, -10, 10, projMat);
 
     var mvMat = mat4.create();
     mat4.identity(mvMat);
     mat4.translate(mvMat, [0, 0.0, -7.0]);
 
-    var angle = 0;
+    var angle = 45;
 
     var buf = makeBox(gl);
 
@@ -216,18 +219,18 @@ function startGL() {
     gl.bindBuffer(gl.ARRAY_BUFFER, buf.normalObject);
     gl.vertexAttribPointer(program.normalAttribute, 3, gl.FLOAT, false, 0, 0);
 
-    gl.bindBuffer(gl.ARRAY_BUFFER, buf.texCoordObject);
-    gl.vertexAttribPointer(program.texcoordAttribute, 2, gl.FLOAT, false, 0, 0);
+    gl.bindBuffer(gl.ARRAY_BUFFER, buf.colorObject);
+    gl.vertexAttribPointer(program.colorAttribute, 4, gl.FLOAT, false, 0, 0);
 
     // Bind the index array
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buf.indexObject);
 
     interval = setInterval(function() {
-        angle += .01;
+        //angle += .01;
         mat4.identity(mvMat);
         mat4.translate(mvMat, [0, 0, -7]);
-        mat4.rotateX(mvMat, angle);
-        mat4.rotateY(mvMat, angle*2);
+        mat4.rotateX(mvMat, (35.264) * Math.PI / 180);
+        mat4.rotateY(mvMat, (45) * Math.PI / 180);
 
         drawBuffer(gl, program, projMat, mvMat, buf.numIndices);
     }, 32);
