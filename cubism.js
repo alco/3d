@@ -188,6 +188,12 @@ function setMatrixUniforms(gl, program, projMat, mvMat) {
 }
 
 var interval;
+var angle = 45;
+var yangle = 0;
+var zangle = 0;
+var angleT = 1;
+var yangleT = 1;
+var zangleT = 1;
 
 function startGL() {
     var canvas = document.getElementById("canvas");
@@ -207,8 +213,6 @@ function startGL() {
     var mvMat = mat4.create();
     mat4.identity(mvMat);
     mat4.translate(mvMat, [0, 0.0, -7.0]);
-
-    var angle = 45;
 
     var buf = makeBox(gl);
 
@@ -230,9 +234,26 @@ function startGL() {
         mat4.identity(mvMat);
         mat4.translate(mvMat, [0, 0, -7]);
         mat4.rotateX(mvMat, (35.264) * Math.PI / 180);
-        mat4.rotateY(mvMat, (45) * Math.PI / 180);
+        mat4.rotateY(mvMat, angle * Math.PI / 180);
+        mat4.rotateX(mvMat, zangle * Math.PI / 180);
+        mat4.rotateZ(mvMat, yangle * Math.PI / 180);
 
         drawBuffer(gl, program, projMat, mvMat, buf.numIndices);
+
+        if (angleT < 1) {
+            angle = lerp1(angleFrom, angleTo, cube1(0, 0, 1, 1, angleT));
+            angleT += .1;
+        }
+
+        if (yangleT < 1) {
+            yangle = lerp1(yangleFrom, yangleTo, cube1(0, 0, 1, 1, yangleT));
+            yangleT += .1;
+        }
+
+        if (zangleT < 1) {
+            zangle = lerp1(zangleFrom, zangleTo, cube1(0, 0, 1, 1, zangleT));
+            zangleT += .1;
+        }
     }, 32);
 
     return gl;
@@ -251,3 +272,40 @@ function drawBuffer(gl, program, projMat, mvMat, numIndices) {
     setMatrixUniforms(gl, program, projMat, mvMat);
     gl.drawElements(gl.TRIANGLES, numIndices, gl.UNSIGNED_BYTE, 0);
 }
+
+
+$('#rot-right').click(function() {
+    angleFrom = angle;
+    angleTo = angle + 90;
+    angleT = 0;
+});
+
+$('#rot-left').click(function() {
+    angleFrom = angle;
+    angleTo = angle - 90;
+    angleT = 0;
+});
+
+$('#rot-fwd').click(function() {
+    yangleFrom = yangle;
+    yangleTo = yangle - 90;
+    yangleT = 0;
+});
+
+$('#rot-bkw').click(function() {
+    yangleFrom = yangle;
+    yangleTo = yangle + 90;
+    yangleT = 0;
+});
+
+$('#rot-roll-left').click(function() {
+    zangleFrom = zangle;
+    zangleTo = zangle - 90;
+    zangleT = 0;
+});
+
+$('#rot-roll-right').click(function() {
+    zangleFrom = zangle;
+    zangleTo = zangle + 90;
+    zangleT = 0;
+});
