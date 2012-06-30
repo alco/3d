@@ -25,21 +25,37 @@
 
     <script id="vshader" type="x-shader/x-vertex">
         attribute vec3 aVertexPosition;
+        attribute vec3 aTexCoord;
+        attribute vec3 aNormal;
 
         uniform mat4 uModelViewMatrix;
         uniform mat4 uProjMatrix;
+        uniform mat4 uNormalMatrix;
+        uniform vec3 lightDir;
+
+        varying float vDot;
+        varying vec2  vTexCoord;
 
         void main(void) {
             gl_Position = uProjMatrix * uModelViewMatrix * vec4(aVertexPosition, 1.0);
+
+            vTexCoord = aTexCoord.st;
+
+            vec4 norm = uNormalMatrix * vec4(aNormal, 1.0);
+            vDot = max(dot(norm.xyz, lightDir), 0.0);
         }
     </script>
 
     <script id="fshader" type="x-shader/x-fragment">
         precision mediump float;
 
+        varying float vDot;
+        varying vec2  vTexCoord;
+
         void main()
         {
-            gl_FragColor = vec4(1., 0., 1., 1.);
+            vec4 color = vec4(1., 0., 1., 1.);
+            gl_FragColor = vec4(color.xyz * vDot, color.a);
         }
     </script>
 
