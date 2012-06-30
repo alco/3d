@@ -188,8 +188,8 @@ function setMatrixUniforms(gl, program, projMat, mvMat) {
 }
 
 var interval;
-var angle = 45;
-var angleT = 1;
+var angleT = 10;
+var angleTo = 0;
 
 var rotMat = mat4.create();
 mat4.identity(rotMat);
@@ -221,6 +221,24 @@ function easeOutElastic(t, b, c, d, a, p) {
     return a*Math.pow(2,-10*t) * Math.sin( (t*d-s)*(2*Math.PI)/p ) + c + b;
 }
 
+function rotate(t) {
+    if (t > 2)
+        return t;
+
+    if (t > 1)
+        t = 1;
+
+    //angle = lerp1(0, angleTo, cube1(0, 0, 1.2, 1, angleT));
+    //angle = easeOutSine(angleT, 0, angleTo, 1);
+    var angle = easeOutElastic(t, 0, angleTo, 1, 0, .5);
+    var sin_a = Math.sin(angle * Math.PI / 180/2);
+    var cos_a = Math.cos(angle * Math.PI / 180/2);
+    var q = quat4.create([axis[0] * sin_a, axis[1] * sin_a, axis[2] * sin_a, cos_a]);
+    quat4.multiply(q, quatFrom, rotQuat);
+    quat4.toMat4(rotQuat, rotMat);
+
+    return t + .04;
+}
 
 function startGL() {
     var canvas = document.getElementById("canvas");
@@ -264,17 +282,9 @@ function startGL() {
 
         drawBuffer(gl, program, projMat, mvMat, buf.numIndices);
 
-        if (angleT < 1) {
-            //angle = lerp1(0, angleTo, cube1(0, 0, 1.2, 1, angleT));
-            //angle = easeOutSine(angleT, 0, angleTo, 1);
-            angle = easeOutElastic(angleT, 0, angleTo, 1, 0, .5);
-            var sin_a = Math.sin(angle * Math.PI / 180/2);
-            var cos_a = Math.cos(angle * Math.PI / 180/2);
-            var q = quat4.create([axis[0] * sin_a, axis[1] * sin_a, axis[2] * sin_a, cos_a]);
-            quat4.multiply(q, quatFrom, rotQuat);
-            quat4.toMat4(rotQuat, rotMat);
-            angleT += .04;
-        }
+        angleT = rotate(angleT);
+        if (angleT > 1)
+            angleT = 10;
     }, 32);
 
     return gl;
@@ -295,6 +305,8 @@ function drawBuffer(gl, program, projMat, mvMat, numIndices) {
 var x_axis = [1, 0, 0];
 var y_axis = [0, 1, 0];
 var z_axis = [0, 0, 1];
+var axis = x_axis;
+var quatFrom = rotQuat;
 
 function rename_axes(name, angle) {
     if (name === 'x') {
@@ -331,6 +343,7 @@ function rename_axes(name, angle) {
 }
 
 $('#rot-right').click(function() {
+    rotate(1);
     quatFrom = quat4.create(rotQuat);
     axis = x_axis;
     angleTo = 90;
@@ -339,6 +352,7 @@ $('#rot-right').click(function() {
 });
 
 $('#rot-left').click(function() {
+    rotate(1);
     quatFrom = quat4.create(rotQuat);
     axis = x_axis;
     angleTo = -90;
@@ -347,6 +361,7 @@ $('#rot-left').click(function() {
 });
 
 $('#rot-fwd').click(function() {
+    rotate(1);
     quatFrom = quat4.create(rotQuat);
     axis = y_axis;
     angleTo = -90;
@@ -355,6 +370,7 @@ $('#rot-fwd').click(function() {
 });
 
 $('#rot-bkw').click(function() {
+    rotate(1);
     quatFrom = quat4.create(rotQuat);
     axis = y_axis;
     angleTo = 90;
@@ -363,6 +379,7 @@ $('#rot-bkw').click(function() {
 });
 
 $('#rot-roll-left').click(function() {
+    rotate(1);
     quatFrom = quat4.create(rotQuat);
     axis = z_axis;
     angleTo = -90;
@@ -371,6 +388,7 @@ $('#rot-roll-left').click(function() {
 });
 
 $('#rot-roll-right').click(function() {
+    rotate(1);
     quatFrom = quat4.create(rotQuat);
     axis = z_axis;
     angleTo = 90;
